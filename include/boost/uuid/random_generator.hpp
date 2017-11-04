@@ -1,27 +1,29 @@
 // Boost random_generator.hpp header file  ----------------------------------------------//
 
 // Copyright 2010 Andy Tompkins.
-// Distributed under the Boost Software License, Version 1.0. (See
-// accompanying file LICENSE_1_0.txt or copy at
-// http://www.boost.org/LICENSE_1_0.txt)
+// Copyright 2017 James E. King III
+// Distributed under the Boost Software License, Version 1.0.
+// (See accompanying file LICENSE_1_0.txt or copy at
+//   http://www.boost.org/LICENSE_1_0.txt)
 
 #ifndef BOOST_UUID_RANDOM_GENERATOR_HPP
 #define BOOST_UUID_RANDOM_GENERATOR_HPP
 
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/detail/seed_rng.hpp>
+#include <boost/assert.hpp>
+#include <boost/core/null_deleter.hpp>
+#include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/variate_generator.hpp>
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/core/null_deleter.hpp>
-#include <boost/assert.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/uuid/detail/seed_rng.hpp>
+#include <boost/uuid/uuid.hpp>
 #include <limits>
 
 namespace boost {
 namespace uuids {
 
-// generate a random-based uuid
+//! \brief generates a random-based uuid
+//! \param[in]  UniformRandomNumberGenerator  concept defined in the Boost.Random documentation
 template <typename UniformRandomNumberGenerator>
 class basic_random_generator {
 private:
@@ -31,7 +33,12 @@ private:
 public:
     typedef uuid result_type;
 
-    // default constructor creates the random number generator
+    //! Default constructor acquires a scoped RNG and manages the lifetime of it.
+    //! \note if using Visual Studio 2013 or earlier, the inputs are limited
+    //!       to being a PseudoRandomNumberGenerator or boost::random_device
+    //!       otherwise any UniformRandomNumberGenerator can be used.
+    //! \post if the RNG is a PseudoRandomNumberGenerator with a seed method
+    //!       then it is properly seeded.
     basic_random_generator()
         : pURNG(new UniformRandomNumberGenerator)
         , generator
@@ -42,12 +49,11 @@ public:
             )
           )
     {
-        // seed the random number generator
         detail::seed(*pURNG);
     }
 
-    // keep a reference to a random number generator
-    // don't seed a given random number generator
+    //! Use a provided RNG by reference.
+    //! \param[in]  gen  the provided RNG
     explicit basic_random_generator(UniformRandomNumberGenerator& gen)
         : pURNG(&gen, boost::null_deleter())
         , generator
@@ -59,8 +65,8 @@ public:
           )
     {}
 
-    // keep a pointer to a random number generator
-    // don't seed a given random number generator
+    //! Use a provided RNG by pointer.
+    //! \param[in]  pGen  the provided RNG
     explicit basic_random_generator(UniformRandomNumberGenerator* pGen)
         : pURNG(pGen, boost::null_deleter())
         , generator
@@ -74,6 +80,8 @@ public:
         BOOST_ASSERT(pURNG);
     }
 
+    //! Generate a random uuid.
+    //! \returns a random uuid
     uuid operator()()
     {
         uuid u;
@@ -112,4 +120,5 @@ typedef basic_random_generator<mt19937> random_generator;
 
 }} // namespace boost::uuids
 
-#endif //BOOST_UUID_RANDOM_GENERATOR_HPP
+#endif // BOOST_UUID_RANDOM_GENERATOR_HPP
+

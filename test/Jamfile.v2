@@ -72,7 +72,8 @@ test-suite uuid :
     [ run test_nil_generator.cpp ]
     [ run test_name_generator.cpp ]
     [ run test_string_generator.cpp ]
-    [ run test_random_generator.cpp ../../random/build//boost_random ]
+    [ run test_random_generator.cpp ../../random/build//boost_random : : : : test_random_generator ]
+    [ run test_random_generator.cpp ../../random/build//boost_random : : : <define>BOOST_UUID_LEGACY_SEED : test_random_generator_legacy_seed ]
     # link to boost::random required for the test that uses random_device
 
     # test tagging an object
