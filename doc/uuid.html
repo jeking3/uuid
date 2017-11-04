@@ -591,34 +591,117 @@ public:
     explicit basic_random_generator(UniformRandomNumberGenerator&amp; gen);
     explicit basic_random_generator(UniformRandomNumberGenerator* pGen);
 
-    uuid operator()();
+    result_type operator()();
 };
-typedef basic_random_generator&lt;mt19937&gt; random_generator;
+    typedef basic_random_generator&lt;boost::mt19937&gt; random_generator;
+    typedef basic_random_generator&lt;detail::random::random_device&gt; random_generator_os;
 
 }} // namespace boost::uuids
 </pre>
 
 <h4><a name="Random Generator">Random Generator</a></h4>
-<p>
-The <tt>boost::uuids::basic_random_generator</tt> class generates a random number
-based uuid from a random number generator (one that conforms to the
-<a href="http://www.boost.org/libs/random/random-concepts.html#uniform-rng">UniformRandomNumberGenerator</a>
-concept).
+    <p>
+        The <tt>boost::uuids::basic_random_generator</tt> class generates a random number
+        based uuid from a random number generator (one that conforms to the
+        <a href="http://www.boost.org/libs/random/random-concepts.html#uniform-rng">UniformRandomNumberGenerator</a>
+        concept).  The default constructor will properly seed the random number generator
+        if it requires the behavior for proper operation.  Additional constructors allow you
+        to provide your own <tt>UniformRandomNumberGenerator</tt> and you are responsible for
+        properly seeding it if necessary. 
+    </p>
+
+<h5>Platforms</h5>
+    <p>
+        The following platforms are supported:
+        <ul>
+            <li>Any POSIX platform with a /dev/urandom device</li>
+            <li>CloudABI</li>
+            <li>Windows (all UWP families) - Wincrypt or BCrypt will be selected automatically</li>
+        </ul>
+    </p>
+
+<h5>Preprocessor Macros</h5>
+    <p>
+        <ul>
+            <li><tt>BOOST_UUID_RANDOM_DEVICE_FORCE_BCRYPT</tt>: on Windows this will force the
+                selection of BCrypt over Wincrypt.</li>
+            <li><tt>BOOST_UUID_RANDOM_DEVICE_NO_LIB</tt>: disable Windows auto linking.</li>
+        </ul>
+    </p>
+
+<h5>Performance</h5>
+    <p>
+        Initialization of the <tt>random_generator</tt> is relatively expensive
+        so reusing it is important - just remember to honor thread safety.  Alternatively,
+        if you want the fastest generator to make a single uuid, use <tt>random_generator_os</tt>,
+        which uses the operating system entropy generator directly, and therefore has no initialization
+        overhead that a <tt>PseudoRandomNumberGenerator</tt> will have.  Benchmark times on a x86_64
+        xeon processor show the different use cases and their performance, however it is important to
+        note that the random_device use cases are more secure due to the operating system provided
+        entropy:
+
 <pre>
-//default construct the random number generator and seed it
-boost::uuids::basic_random_generator&lt;boost::mt19937&gt; gen;
-boost::uuids::uuid u = gen();
+Linux (/dev/urandom used for random_device):
 
-//for convenience boost::uuids::random_generator
-//is equivalent to boost::uuids::basic_random_generator&lt;boost::mt19937&gt;
-boost::uuids::random_generator gen;
-boost::uuids::uuid u = gen();
+Benchmark boost::uuids::basic_random_generator<mt19937> (reused for 1M loops):
+0.034394s wall, 0.030000s user + 0.000000s system = 0.030000s CPU (87.2%)
 
-//use an existing random number generator
-//pass either a reference or a pointer to the random number generator
-boost::mt19937 ran;
-boost::uuids::basic_random_generator&lt;boost::mt19937&gt; gen(&amp;ran);
-boost::uuids::uuid u = gen();
+Benchmark boost::uuids::basic_random_generator<random_device> (reused for 1M loops):
+1.913621s wall, 0.130000s user + 1.780000s system = 1.910000s CPU (99.8%)
+
+Benchmark boost::uuids::basic_random_generator<mt19937> (new generator each loop for 20K loops):
+5.976147s wall, 0.330000s user + 5.640000s system = 5.970000s CPU (99.9%)
+
+Benchmark boost::uuids::basic_random_generator<random_device> (new generator each loop for 20K loops):
+0.063936s wall, 0.000000s user + 0.060000s system = 0.060000s CPU (93.8%)
+
+Windows (Wincrypt used for random_device):
+
+Benchmark boost::uuids::basic_random_generator<mt19937> (reused for 1M loops):
+ 0.053410s wall, 0.046875s user + 0.015625s system = 0.062500s CPU (117.0%)
+
+Benchmark boost::uuids::basic_random_generator<random_device> (reused for 1M loops):
+ 0.875263s wall, 0.875000s user + 0.000000s system = 0.875000s CPU (100.0%)
+
+Benchmark boost::uuids::basic_random_generator<mt19937> (new generator each loop for 20K loops):
+ 3.661115s wall, 3.046875s user + 0.625000s system = 3.671875s CPU (100.3%)
+
+Benchmark boost::uuids::basic_random_generator<random_device> (new generator each loop for 20K loops):
+ 1.052127s wall, 0.437500s user + 0.609375s system = 1.046875s CPU (99.5%)
+</pre>
+    </p>
+
+<h5>Exceptions</h5>
+    <p>
+        The exception <tt>boost::uuids::entropy_error</tt> is thrown if there is an error getting
+        entropy from the operating system.
+    </p>
+
+<h5>Examples</h5>
+<pre>
+    // the default behavior of random_generator favors creation
+    // of a small number of uuids from a single instance of a
+    // generator as it has a low setup cost:
+    boost::uuids::uuid id = boost::uuids::random_generator()();
+
+    // to make a large number of uuids in a more efficient but
+    // less secure manner, use random_generator_bulk instead.
+    // there is a test (test_bench_random) that determines the
+    // cut-off point where it is more wall-time efficient to 
+    // use bulk over standard.
+    boost::uuids::random_generator_bulk bulkgen;
+    for (size_t i = 0; i < 100; ++i)
+    {
+        boost::uuids::uuid u = bulkgen();
+        // do something with u
+    }
+
+    // you can also use a different random number generator - pass
+    // either a reference or a pointer to the random number generator
+    boost::random::lagged_fibonacci607 ran; // seed it yourself
+    boost::uuids::basic_random_generator
+        <boost::random::lagged_fibonacci607> genfib(&ran);
+    boost::uuids::uuid r = genfib();
 </pre>
 
 <h3><a name="boost/uuid/uuid_io.hpp" href="./../../boost/uuid/uuid_io.hpp">boost/uuid/uuid_io.hpp</a></h3>
