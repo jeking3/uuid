@@ -599,26 +599,38 @@ typedef basic_random_generator&lt;mt19937&gt; random_generator;
 </pre>
 
 <h4><a name="Random Generator">Random Generator</a></h4>
-<p>
 The <tt>boost::uuids::basic_random_generator</tt> class generates a random number
 based uuid from a random number generator (one that conforms to the
 <a href="http://www.boost.org/libs/random/random-concepts.html#uniform-rng">UniformRandomNumberGenerator</a>
 concept).
+
+<h5>Limitations</h5>
+On Microsoft Visual Studio 2013 and earlier, the type of <tt>UniformRandomNumberGenerator</tt> is
+limited to being a <tt>PseudoRandomNumberGenerator</tt> or <tt>boost::random::random_device</tt>
+due to compiler issues.  If you experience compiler errors with <tt>detail::seed</tt> template
+resolution, try defining `BOOST_UUID_LEGACY_SEED` to force the previous, more restrictive logic.
+
+<h5>Example</h5>
 <pre>
-//default construct the random number generator and seed it
+// default construct the random number generator and seed it
 boost::uuids::basic_random_generator&lt;boost::mt19937&gt; gen;
 boost::uuids::uuid u = gen();
 
-//for convenience boost::uuids::random_generator
-//is equivalent to boost::uuids::basic_random_generator&lt;boost::mt19937&gt;
-boost::uuids::random_generator gen;
-boost::uuids::uuid u = gen();
+// for convenience boost::uuids::random_generator
+// is equivalent to boost::uuids::basic_random_generator&lt;boost::mt19937&gt;
+boost::uuids::random_generator gen2;
+boost::uuids::uuid u2 = gen();
 
-//use an existing random number generator
-//pass either a reference or a pointer to the random number generator
+// if the platform supports random_device, you can use it instead
+// as it will be more efficient than using a PseudoRandomNumberGenerator:
+boost::uuids::random_generator&lt;boost::random_device&gt; gen3;
+boost::uuids::uuid u3 = gen();
+
+// use an existing random number generator
+// pass either a reference or a pointer to the random number generator
 boost::mt19937 ran;
-boost::uuids::basic_random_generator&lt;boost::mt19937&gt; gen(&amp;ran);
-boost::uuids::uuid u = gen();
+boost::uuids::basic_random_generator&lt;boost::mt19937&gt; gen4(&amp;ran);
+boost::uuids::uuid u4 = gen();
 </pre>
 
 <h3><a name="boost/uuid/uuid_io.hpp" href="./../../boost/uuid/uuid_io.hpp">boost/uuid/uuid_io.hpp</a></h3>

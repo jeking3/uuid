@@ -10,6 +10,7 @@
 //  25 Feb 2008 - moved to namespace boost::uuids::detail
 //  28 Nov 2009 - disabled deprecated warnings for MSVC
 //  28 Jul 2014 - fixed valgrind warnings and better entropy sources for MSVC
+//  04 Nov 2017 - better seed support for all UniformRandomNumberGenerators
 
 // seed_rng models a UniformRandomNumberGenerator (see Boost.Random).
 // Random number generators are hard to seed well.  This is intended to provide
@@ -29,6 +30,9 @@
 #include <cstdlib> // for rand
 #include <cstdio> // for FILE, fopen, fread, fclose
 #include <boost/core/noncopyable.hpp>
+#include <boost/core/enable_if.hpp>
+#include <boost/predef/compiler.h>
+#include <boost/tti/has_member_function.hpp>
 #include <boost/uuid/detail/sha1.hpp>
 //#include <boost/nondet_random.hpp> //forward declare boost::random::random_device
 
@@ -292,7 +296,39 @@ class generator_iterator
     typename Generator::result_type m_value;
 };
 
-// seed() seeds a random number generator with good seed values
+// Detect whether UniformRandomNumberGenerator has a seed() method which indicates that
+// it is a PseudoRandomNumberGenerator and needs a seed to initialize it.  This allows
+// basic_random_generator to take any type of UniformRandomNumberGenerator and still
+// meet the post-conditions for the constructor.  In case some compilers run into issues
+// handling this, define BOOST_UUID_LEGACY_SEED to force the previous behavior.
+
+#if !defined(BOOST_UUID_LEGACY_SEED) && (!BOOST_COMP_MSVC || (BOOST_COMP_MSVC >= BOOST_VERSION_NUMBER(14,0,0)))
+
+BOOST_TTI_HAS_MEMBER_FUNCTION(seed)
+
+template<class MaybePseudoRandomNumberGenerator>
+typename boost::enable_if<has_member_function_seed<MaybePseudoRandomNumberGenerator, void> >::type
+seed(MaybePseudoRandomNumberGenerator& rng)
+{
+    detail::seed_rng egen;
+    generator_iterator<detail::seed_rng> begin(&egen);
+    generator_iterator<detail::seed_rng> end;
+    rng.seed(begin, end);
+}
+
+
+template<class MaybePseudoRandomNumberGenerator>
+typename boost::disable_if<has_member_function_seed<MaybePseudoRandomNumberGenerator, void> >::type
+seed(MaybePseudoRandomNumberGenerator&)
+{
+}
+
+#else
+
+// Visual Studio 2010, 2012, 2013 get internal compiler errors 
+// on the less-restrictive code above so we fall back to previous 
+// logic which is specifically only supports boost::random::random_device
+// as the only non-pseudo random number generator.
 
 template <typename UniformRandomNumberGenerator>
 inline void seed(UniformRandomNumberGenerator& rng)
@@ -310,6 +346,8 @@ inline void seed<boost::random::random_device>(boost::random::random_device&) {}
 // random_device does not / can not be seeded
 template <>
 inline void seed<seed_rng>(seed_rng&) {}
+
+#endif
 
 }}} //namespace boost::uuids::detail
 
