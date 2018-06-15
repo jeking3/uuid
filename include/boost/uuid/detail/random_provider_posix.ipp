@@ -3,7 +3,7 @@
 * Copyright Jens Maurer 2000
 * Copyright 2007 Andy Tompkins.
 * Copyright Steven Watanabe 2010-2011
-* Copyright 2017 James E. King III
+* Copyright 2017, 2018 James E. King III
 *
 * Distributed under the Boost Software License, Version 1.0. (See
 * accompanying file LICENSE_1_0.txt or copy at
@@ -13,6 +13,7 @@
 */
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/move/core.hpp>
 #include <boost/throw_exception.hpp>
 #include <boost/uuid/entropy_error.hpp>
 #include <cerrno>
@@ -56,12 +57,25 @@ class random_provider_base
         }
     }
 
+    // move ctor
+    random_provider_base(BOOST_RV_REF(random_provider_base) from)
+      : fd_(from.fd_)
+    {
+        from.fd_ = 0;
+    }
+
+    // move assignment
+    random_provider_base& operator=(BOOST_RV_REF(random_provider_base) from)
+    {
+       close();
+       fd_ = from.fd_;
+       from.fd_ = 0;
+       return *this;
+    }
+
     ~random_provider_base() BOOST_NOEXCEPT
     {
-        if (fd_)
-        {
-            ignore_unused(BOOST_UUID_RANDOM_PROVIDER_POSIX_IMPL_CLOSE(fd_));
-        }
+	close();
     }
 
     //! Obtain entropy and place it into a memory location
@@ -87,6 +101,15 @@ class random_provider_base
     }
 
   private:
+    void close()
+    {
+        if (fd_)
+        {
+            ignore_unused(BOOST_UUID_RANDOM_PROVIDER_POSIX_IMPL_CLOSE(fd_));
+        }
+	fd_ = 0;
+    }
+
     int fd_;
 };
 

@@ -3,7 +3,7 @@
 * Copyright Jens Maurer 2000
 * Copyright 2007 Andy Tompkins.
 * Copyright Steven Watanabe 2010-2011
-* Copyright 2017 James E. King III
+* Copyright 2017, 2018 James E. King III
 *
 * Distributed under the Boost Software License, Version 1.0. (See
 * accompanying file LICENSE_1_0.txt or copy at
@@ -13,6 +13,7 @@
 */
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/move/core.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/winapi/crypt.hpp>
 #include <boost/winapi/get_last_error.hpp>
@@ -49,6 +50,22 @@ class random_provider_base
             boost::winapi::DWORD_ err = boost::winapi::GetLastError();
             BOOST_THROW_EXCEPTION(entropy_error(err, "CryptAcquireContext"));
         }
+    }
+
+    // move ctor
+    random_provider_base(BOOST_RV_REF(random_provider_base) from)
+      : hProv_(from.hProv_)
+    {
+        from.hProv_ = 0;
+    }
+
+    // move assignment
+    random_provider_base& operator=(BOOST_RV_REF(random_provider_base) from)
+    {
+       close();
+       hProv_ = from.hProv_;
+       from.hProv_ = 0;
+       return *this;
     }
 
     ~random_provider_base() BOOST_NOEXCEPT

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017 James E. King III
+// Copyright (c) 2017, 2018 James E. King III
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -14,6 +14,7 @@
 #include <boost/core/noncopyable.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/limits.hpp>
+#include <boost/move/core.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/type_traits/is_integral.hpp>
 #include <boost/type_traits/is_unsigned.hpp>
@@ -35,14 +36,20 @@ namespace detail {
 //! \brief Contains code common to all random_provider implementations.
 //! \note  random_provider_base is required to provide this method:
 //!        void get_random_bytes(void *buf, size_t siz);
-//! \note  noncopyable because of some base implementations so
-//!        this makes it uniform across platforms to avoid any  
+//! \note  noncopyable but movable because of some base implementations
+//!        so this makes it uniform across platforms to avoid any  
 //!        porting surprises
 class random_provider
-    : public detail::random_provider_base,
-      public noncopyable
+    : public detail::random_provider_base
 {
+private:
+    BOOST_MOVABLE_BUT_NOT_COPYABLE(random_provider)
+
 public:
+    random_provider() : random_provider_base()
+    {
+    }
+
     //! Leverage the provider as a SeedSeq for
     //! PseudoRandomNumberGeneration seeing.
     //! \note: See Boost.Random documentation for more details
