@@ -14,7 +14,7 @@
 #include <boost/core/noncopyable.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/limits.hpp>
-#include <boost/move/core.hpp>
+#include <boost/move/move.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/type_traits/is_integral.hpp>
 #include <boost/type_traits/is_unsigned.hpp>
@@ -36,18 +36,27 @@ namespace detail {
 //! \brief Contains code common to all random_provider implementations.
 //! \note  random_provider_base is required to provide this method:
 //!        void get_random_bytes(void *buf, size_t siz);
-//! \note  noncopyable but movable because of some base implementations
-//!        so this makes it uniform across platforms to avoid any  
-//!        porting surprises
+//! \note  assume underlying implementations are noncopyable but movable
+//!        for portability
 class random_provider
-    : public detail::random_provider_base
 {
 private:
     BOOST_MOVABLE_BUT_NOT_COPYABLE(random_provider)
 
 public:
-    random_provider() : random_provider_base()
+    //! Default constructor
+    random_provider() { }
+
+    //! Move constructor
+    random_provider(BOOST_RV_REF(random_provider) from)
+      : base_(boost::move(from.base_))
+    { }
+
+    //! Move assignment operator
+    random_provider& operator=(BOOST_RV_REF(random_provider) from)
     {
+        base_ = boost::move(from.base_);
+        return *this;
     }
 
     //! Leverage the provider as a SeedSeq for
@@ -68,11 +77,19 @@ public:
         }
     }
 
+    void get_random_bytes(void *buf, size_t siz)
+    {
+        base_.get_random_bytes(buf, siz);
+    }
+
     //! Return the name of the selected provider
     const char * name() const
     {
         return BOOST_UUID_RANDOM_PROVIDER_STRINGIFY(BOOST_UUID_RANDOM_PROVIDER_NAME);
     }
+
+private:
+    random_provider_base base_;
 };
 
 } // detail

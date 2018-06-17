@@ -1,7 +1,7 @@
 // Boost random_generator.hpp header file  ----------------------------------------------//
 
 // Copyright 2010 Andy Tompkins.
-// Copyright 2017 James E. King III
+// Copyright 2017, 2018 James E. King III
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -12,6 +12,7 @@
 #include <boost/assert.hpp>
 #include <boost/core/enable_if.hpp>
 #include <boost/core/null_deleter.hpp>
+#include <boost/move/move.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/variate_generator.hpp>
@@ -146,10 +147,31 @@ private:
 //! \brief a far less complex random generator that uses
 //!        operating system provided entropy which will
 //!        satisfy the majority of use cases
+//! \note  this is not copyable due to the underlying
+//!        implementation which carries operating system
+//!        resources on some platforms - but it is movable
 class random_generator_pure
 {
+private:
+    BOOST_MOVABLE_BUT_NOT_COPYABLE(random_generator_pure)
+
 public:
     typedef uuid result_type;
+
+    //! Default constructor
+    random_generator_pure() { }
+
+    //! Move constructor
+    random_generator_pure(BOOST_RV_REF(random_generator_pure) from)
+      : prov_(boost::move(from.prov_))
+    { }
+
+    //! Move assignment operator
+    random_generator_pure& operator=(BOOST_RV_REF(random_generator_pure) from) 
+    {
+        prov_ = boost::move(from.prov_);
+        return *this;
+    }
 
     //! \returns a random, valid uuid
     //! \throws entropy_error

@@ -40,6 +40,9 @@ namespace detail {
 
 class random_provider_base
 {
+  private:
+    BOOST_MOVABLE_BUT_NOT_COPYABLE(random_provider_base)
+
   public:
     random_provider_base()
       : fd_(0)
@@ -101,7 +104,7 @@ class random_provider_base
     }
 
   private:
-    void close()
+    void close() BOOST_NOEXCEPT
     {
         if (fd_)
         {

@@ -103,6 +103,7 @@ test-suite uuid :
     [ run test_name_generator.cpp ]
     [ run test_string_generator.cpp ]
     [ run test_random_generator.cpp ]
+    [ compile-fail test_random_generator_not_copyable.cpp ]
 
     # test tagging an object
     [ run test_tagging.cpp ]

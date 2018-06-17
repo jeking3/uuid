@@ -11,12 +11,14 @@
 
 #include <boost/core/ignore_unused.hpp>
 #include <boost/detail/lightweight_test.hpp>
+#include <boost/move/move.hpp>
 #include <boost/predef/library/c/cloudabi.h>
 #include <boost/random.hpp>
 #include <boost/uuid/entropy_error.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <vector>
 
 template <typename RandomUuidGenerator>
 void check_random_generator(RandomUuidGenerator& uuid_gen)
@@ -116,6 +118,10 @@ int main(int, char*[])
         std::cout << uuid_gen1() << std::endl;
     }
 #endif
+
+    // movable
+    std::vector<random_generator> generators;
+    generators.push_back(boost::move(uuid_gen1));
 
     return boost::report_errors();
 }

@@ -28,6 +28,9 @@ namespace detail {
 
 class random_provider_base
 {
+  private:
+    BOOST_MOVABLE_BUT_NOT_COPYABLE(random_provider_base)
+
   public:
     random_provider_base()
       : hProv_(NULL)
@@ -63,10 +66,7 @@ class random_provider_base
 
     ~random_provider_base() BOOST_NOEXCEPT
     {
-        if (hProv_)
-        {
-            ignore_unused(boost::winapi::BCryptCloseAlgorithmProvider(hProv_, 0));
-        }
+	close();
     }
 
     //! Obtain entropy and place it into a memory location
@@ -88,6 +88,14 @@ class random_provider_base
     }
 
   private:
+    void close() BOOST_NOEXCEPT
+    {
+        if (hProv_)
+        {
+            ignore_unused(boost::winapi::BCryptCloseAlgorithmProvider(hProv_, 0));
+        }
+    }
+
     boost::winapi::BCRYPT_ALG_HANDLE_ hProv_;
 };
 
